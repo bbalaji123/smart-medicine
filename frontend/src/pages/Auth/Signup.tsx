@@ -150,7 +150,7 @@ const Signup: React.FC = () => {
                 <HeartIcon className="h-8 w-8 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Smart Medicine</h1>
+                <h1 className="text-2xl font-bold text-gray-900">Smart Medicine Website</h1>
                 <p className="text-sm text-gray-600">Your Health Companion</p>
               </div>
             </div>
