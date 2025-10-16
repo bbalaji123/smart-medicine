@@ -99,12 +99,25 @@ const Signup: React.FC = () => {
           relationship: data.emergencyContactRelationship || 'Other',
         };
       }
+      // Debug: log the payload before sending to backend
+      // This will help confirm what's being sent when diagnosing why no user is stored
+      // eslint-disable-next-line no-console
+      console.debug('Signup payload:', signupData);
 
       await signup(signupData);
+
+      // eslint-disable-next-line no-console
+      console.info('Signup successful for', signupData.email);
       toast.success('Account created successfully! Welcome to Smart Medicine.');
       navigate('/dashboard');
     } catch (error) {
-      toast.error('Signup failed. Please try again.');
+      // Extract useful message from error (axios or general Error)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const err: any = error;
+      const serverMessage = err?.response?.data?.message || err?.message || 'Signup failed. Please try again.';
+      // eslint-disable-next-line no-console
+      console.error('Signup error:', err);
+      toast.error(serverMessage);
     }
   };
 

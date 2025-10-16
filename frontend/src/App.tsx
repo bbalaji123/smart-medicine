@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -15,85 +15,120 @@ import CaregiverDashboard from './pages/Caregiver/CaregiverDashboard';
 import HealthJournal from './pages/HealthJournal/HealthJournal';
 
 function App() {
+  // Define routes as a plain array; RouterProvider will render them.
+  const routes = [
+    { path: '/login', element: <Login /> },
+    { path: '/signup', element: <Signup /> },
+
+    // Root redirect to dashboard inside protected layout
+    {
+      path: '/',
+      element: (
+        <ProtectedRoute>
+          <Layout>
+            <Navigate to="/dashboard" replace />
+          </Layout>
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: '/dashboard',
+      element: (
+        <ProtectedRoute>
+          <Layout>
+            <Dashboard />
+          </Layout>
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: '/medications',
+      element: (
+        <ProtectedRoute>
+          <Layout>
+            <Medications />
+          </Layout>
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: '/reminders',
+      element: (
+        <ProtectedRoute>
+          <Layout>
+            <Reminders />
+          </Layout>
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: '/analytics',
+      element: (
+        <ProtectedRoute>
+          <Layout>
+            <Analytics />
+          </Layout>
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: '/health-journal',
+      element: (
+        <ProtectedRoute>
+          <Layout>
+            <HealthJournal />
+          </Layout>
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: '/caregiver',
+      element: (
+        <ProtectedRoute>
+          <Layout>
+            <CaregiverDashboard />
+          </Layout>
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: '/profile',
+      element: (
+        <ProtectedRoute>
+          <Layout>
+            <Profile />
+          </Layout>
+        </ProtectedRoute>
+      ),
+    },
+  ];
+
+  // Create router with v7 future flags enabled to opt-in to upcoming behaviors
+  // Only set the supported future flag to keep TypeScript happy
+  // Cast future to any because the installed react-router types may not yet include the newer flags
+  const router = createBrowserRouter(routes, {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    future: ({ v7_startTransition: true } as any),
+  });
+
   return (
     <AuthProvider>
-      <Router>
-        <div className="App">
-          <Routes>
-            {/* Public routes */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            
-            {/* Protected routes */}
-            <Route path="/" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Navigate to="/dashboard" replace />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Dashboard />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/medications" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Medications />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/reminders" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Reminders />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/analytics" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Analytics />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/health-journal" element={
-              <ProtectedRoute>
-                <Layout>
-                  <HealthJournal />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/caregiver" element={
-              <ProtectedRoute>
-                <Layout>
-                  <CaregiverDashboard />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/profile" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Profile />
-                </Layout>
-              </ProtectedRoute>
-            } />
-          </Routes>
-          <Toaster 
-            position="top-right"
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: '#363636',
-                color: '#fff',
-              },
-            }}
-          />
-        </div>
-      </Router>
+      <>
+  {/* cast again to avoid type errors in RouterProvider */}
+  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+  <RouterProvider router={router} future={({ v7_startTransition: true } as any)} />
+
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: '#363636',
+              color: '#fff',
+            },
+          }}
+        />
+      </>
     </AuthProvider>
   );
 }
