@@ -26,7 +26,7 @@ export interface AuthState {
 
 export interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
-  signup: (userData: SignupData) => Promise<void>;
+  signup: (userData: SignupData) => Promise<{ user: User; token: string }>;
   logout: () => void;
   clearError: () => void;
 }
@@ -161,17 +161,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const signup = async (userData: SignupData): Promise<void> => {
+  const signup = async (userData: SignupData): Promise<{ user: User; token: string }> => {
     dispatch({ type: 'SIGNUP_START' });
-    
+
     try {
       const response = await authAPI.signup(userData);
-      
+
       // Store token and user data
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      
+      if (response?.token) {
+        localStorage.setItem('token', response.token);
+      }
+      if (response?.user) {
+        localStorage.setItem('user', JSON.stringify(response.user));
+      }
+
       dispatch({ type: 'SIGNUP_SUCCESS', payload: response.user });
+      // Return the response so callers can act on it (e.g., navigate)
+      return response;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Signup failed';
       dispatch({ type: 'SIGNUP_FAILURE', payload: errorMessage });

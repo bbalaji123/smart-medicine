@@ -70,7 +70,7 @@ const Signup: React.FC = () => {
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isValid },
     watch,
   } = useForm<SignupFormData>({
     resolver: yupResolver(signupSchema) as any,
@@ -78,9 +78,20 @@ const Signup: React.FC = () => {
 
   const watchedFields = watch();
 
+  // Debug form validation
+  React.useEffect(() => {
+    console.log('Form validation errors:', errors);
+    console.log('Form is valid:', isValid);
+    console.log('Current step:', currentStep);
+  }, [errors, isValid, currentStep]);
+
   const onSubmit = async (data: SignupFormData) => {
+    console.log('Form submission triggered!', data);
     try {
       clearError();
+      
+      // Log form data for debugging
+      console.debug('Form data received:', data);
       
       const signupData: SignupData = {
         email: data.email,
@@ -99,23 +110,22 @@ const Signup: React.FC = () => {
           relationship: data.emergencyContactRelationship || 'Other',
         };
       }
+      
       // Debug: log the payload before sending to backend
-      // This will help confirm what's being sent when diagnosing why no user is stored
-      // eslint-disable-next-line no-console
       console.debug('Signup payload:', signupData);
 
-      await signup(signupData);
+      const response = await signup(signupData);
 
-      // eslint-disable-next-line no-console
-      console.info('Signup successful for', signupData.email);
+      console.info('Signup response:', response);
+
       toast.success('Account created successfully! Welcome to Smart Medicine.');
+
+      // Only navigate after signup resolves successfully
       navigate('/dashboard');
     } catch (error) {
       // Extract useful message from error (axios or general Error)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const err: any = error;
       const serverMessage = err?.response?.data?.message || err?.message || 'Signup failed. Please try again.';
-      // eslint-disable-next-line no-console
       console.error('Signup error:', err);
       toast.error(serverMessage);
     }
@@ -200,7 +210,7 @@ const Signup: React.FC = () => {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="card"
         >
-          <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+          <form className="space-y-6" onSubmit={handleSubmit(onSubmit)} noValidate>
             {error && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -489,6 +499,7 @@ const Signup: React.FC = () => {
                     whileTap={{ scale: 0.98 }}
                     type="submit"
                     disabled={isLoading}
+                    onClick={() => console.log('Create Account button clicked!')}
                     className="btn-primary flex-1 flex justify-center items-center"
                   >
                     {isLoading ? (

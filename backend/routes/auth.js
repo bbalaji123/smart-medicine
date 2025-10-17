@@ -36,6 +36,8 @@ router.post('/signup', [
     .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number'),
 ], async (req, res) => {
   try {
+    // Debug: log incoming signup request body
+    console.log('POST /api/auth/signup - body:', req.body);
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
