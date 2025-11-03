@@ -8,6 +8,8 @@ require('dotenv').config();
 // Import routes
 const authRoutes = require('./routes/auth');
 const medicationRoutes = require('./routes/medications');
+const healthRoutes = require('./routes/health');
+const emergencyContactsRoutes = require('./routes/emergencyContacts');
 
 // Initialize express app
 const app = express();
@@ -48,6 +50,8 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/smart-med
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/medications', medicationRoutes);
+app.use('/api/health', healthRoutes);
+app.use('/api/emergency-contacts', emergencyContactsRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

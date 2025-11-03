@@ -2,6 +2,10 @@ import React from 'react';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
+import { HealthMetricsProvider } from './contexts/HealthMetricsContext';
+import { EmergencyContactsProvider } from './contexts/EmergencyContactsContext';
+import { MedicationsProvider } from './contexts/MedicationsContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout/Layout';
 import Login from './pages/Auth/Login';
@@ -112,24 +116,32 @@ function App() {
   });
 
   return (
-    <AuthProvider>
-      <>
-  {/* cast again to avoid type errors in RouterProvider */}
-  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-  <RouterProvider router={router} future={({ v7_startTransition: true } as any)} />
+    <ThemeProvider>
+      <AuthProvider>
+        <HealthMetricsProvider>
+          <EmergencyContactsProvider>
+            <MedicationsProvider>
+              <>
+                {/* cast again to avoid type errors in RouterProvider */}
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                <RouterProvider router={router} future={({ v7_startTransition: true } as any)} />
 
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            duration: 4000,
-            style: {
-              background: '#363636',
-              color: '#fff',
-            },
-          }}
-        />
-      </>
-    </AuthProvider>
+                <Toaster
+                  position="top-right"
+                  toastOptions={{
+                    duration: 4000,
+                    style: {
+                      background: '#363636',
+                      color: '#fff',
+                    },
+                  }}
+                />
+              </>
+            </MedicationsProvider>
+          </EmergencyContactsProvider>
+        </HealthMetricsProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

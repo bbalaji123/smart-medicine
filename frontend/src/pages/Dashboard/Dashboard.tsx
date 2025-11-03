@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   BellIcon,
@@ -7,13 +7,26 @@ import {
   HeartIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
+  PlusIcon,
 } from '@heroicons/react/24/outline';
 import { TrophyIcon, FireIcon } from '@heroicons/react/24/solid';
 import GamificationSection from '../../components/Gamification/GamificationSection';
 import { useAuth } from '../../contexts/AuthContext';
+import { useHealthMetrics } from '../../contexts/HealthMetricsContext';
+import AddHealthMetricModal from '../../components/Modal/AddHealthMetricModal';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
+  const { metrics, fetchMetrics, fetchJournalEntries } = useHealthMetrics();
+  const [isAddMetricModalOpen, setIsAddMetricModalOpen] = useState(false);
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    // Fetch recent metrics and journal entries
+    fetchMetrics({ limit: 10 });
+    fetchJournalEntries({ limit: 5 });
+  }, [fetchMetrics, fetchJournalEntries]);
   
   // Get greeting based on time of day
   const getGreeting = () => {
@@ -70,10 +83,49 @@ const Dashboard: React.FC = () => {
     { medication: 'Lisinopril', daysLeft: 7 },
   ];
 
-  const healthMetrics = [
-    { name: 'Blood Pressure', value: '120/80', trend: 'stable', color: 'text-medical-600' },
-    { name: 'Heart Rate', value: '72 bpm', trend: 'normal', color: 'text-medical-600' },
-    { name: 'Weight', value: '165 lbs', trend: 'down', color: 'text-primary-600' },
+  // Get latest health metrics for display
+  const latestMetrics = metrics.slice(0, 3).map(metric => {
+    let displayValue = '';
+    let displayName = '';
+    
+    switch (metric.type) {
+      case 'blood_pressure':
+        const bp = metric.value as { systolic: number; diastolic: number };
+        displayValue = `${bp.systolic}/${bp.diastolic}`;
+        displayName = 'Blood Pressure';
+        break;
+      case 'heart_rate':
+        displayValue = `${metric.value} ${metric.unit}`;
+        displayName = 'Heart Rate';
+        break;
+      case 'weight':
+        displayValue = `${metric.value} ${metric.unit}`;
+        displayName = 'Weight';
+        break;
+      case 'blood_sugar':
+        displayValue = `${metric.value} ${metric.unit}`;
+        displayName = 'Blood Sugar';
+        break;
+      case 'temperature':
+        displayValue = `${metric.value} ${metric.unit}`;
+        displayName = 'Temperature';
+        break;
+      default:
+        displayValue = `${metric.value} ${metric.unit}`;
+        displayName = metric.type.replace('_', ' ');
+    }
+    
+    return {
+      name: displayName,
+      value: displayValue,
+      trend: 'stable',
+      color: 'text-medical-600',
+      date: new Date(metric.timestamp).toLocaleDateString(),
+    };
+  });
+
+  const healthMetrics = latestMetrics.length > 0 ? latestMetrics : [
+    { name: 'No metrics yet', value: '--', trend: 'Add your first metric', color: 'text-gray-400', date: '' },
   ];
 
   return (
@@ -232,22 +284,32 @@ const Dashboard: React.FC = () => {
         transition={{ duration: 0.5, delay: 0.5 }}
         className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
       >
-        <button className="btn-primary text-center py-4">
+        <button onClick={() => navigate('/medications')} className="btn-primary text-center py-4">
+          <PlusIcon className="h-5 w-5 inline mr-2" />
           Add Medication
         </button>
-        <button className="btn-secondary text-center py-4">
+        <button onClick={() => setIsAddMetricModalOpen(true)} className="btn-secondary text-center py-4">
+          <HeartIcon className="h-5 w-5 inline mr-2" />
           Log Health Metric
         </button>
-        <button className="btn-secondary text-center py-4">
+        <button onClick={() => navigate('/analytics')} className="btn-secondary text-center py-4">
+          <ChartBarIcon className="h-5 w-5 inline mr-2" />
           View Analytics
         </button>
-        <button className="btn-secondary text-center py-4">
+        <button onClick={() => navigate('/profile')} className="btn-secondary text-center py-4">
+          <ExclamationTriangleIcon className="h-5 w-5 inline mr-2" />
           Emergency Contact
         </button>
       </motion.div>
 
       {/* Gamification Section */}
       <GamificationSection />
+      
+      {/* Add Health Metric Modal */}
+      <AddHealthMetricModal 
+        isOpen={isAddMetricModalOpen}
+        onClose={() => setIsAddMetricModalOpen(false)}
+      />
     </div>
   );
 };
