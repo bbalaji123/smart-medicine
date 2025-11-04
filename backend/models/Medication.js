@@ -19,13 +19,12 @@ const medicationSchema = new mongoose.Schema({
     unit: {
       type: String,
       required: [true, 'Dosage unit is required'],
-      enum: ['mg', 'g', 'ml', 'tablets', 'capsules', 'drops', 'puffs', 'units']
+      enum: ['mg', 'g', 'mcg', 'ml', 'tablets', 'capsules', 'drops', 'puffs', 'units']
     }
   },
   frequency: {
     type: String,
-    required: [true, 'Frequency is required'],
-    enum: ['once-daily', 'twice-daily', 'three-times-daily', 'four-times-daily', 'as-needed', 'custom']
+    required: [true, 'Frequency is required']
   },
   customFrequency: {
     times: Number,
@@ -88,6 +87,25 @@ const medicationSchema = new mongoose.Schema({
     currentSupply: Number,
     lastRefillDate: Date
   },
+  refillHistory: [{
+    refillDate: {
+      type: Date,
+      required: true
+    },
+    quantity: {
+      type: Number,
+      required: true
+    },
+    pharmacyName: String,
+    pharmacyPhone: String,
+    prescriptionNumber: String,
+    cost: Number,
+    notes: String,
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   adherenceData: [{
     date: {
       type: Date,

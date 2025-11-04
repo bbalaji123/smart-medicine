@@ -9,23 +9,31 @@ import {
   ClockIcon,
   CheckCircleIcon,
   XCircleIcon,
+  ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import { useMedications } from '../../contexts/MedicationsContext';
+import AddMedicationModal from '../../components/Modal/AddMedicationModal';
+import RefillMedicationModal from '../../components/Modal/RefillMedicationModal';
 import type { Medication } from '../../services/medications';
 
 const Medications: React.FC = () => {
   const { 
     medications, 
     loading, 
-    fetchMedications, 
+    fetchMedications,
+    createMedication,
     deleteMedication, 
     markDoseTaken, 
-    markDoseSkipped 
+    markDoseSkipped,
+    recordRefill,
   } = useMedications();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showRefillModal, setShowRefillModal] = useState(false);
+  const [selectedMedication, setSelectedMedication] = useState<Medication | null>(null);
 
   useEffect(() => {
     fetchMedications();
@@ -84,6 +92,17 @@ const Medications: React.FC = () => {
     await markDoseSkipped(medId, scheduleIndex, 'User skipped');
   };
 
+  const handleOpenRefill = (medication: Medication) => {
+    setSelectedMedication(medication);
+    setShowRefillModal(true);
+  };
+
+  const handleRefillSubmit = async (refillData: any) => {
+    if (selectedMedication) {
+      await recordRefill(selectedMedication._id, refillData);
+    }
+  };
+
   // Check for potential interactions
   const hasInteractions = medications.some(med => 
     med.interactions && med.interactions.length > 0
@@ -110,6 +129,7 @@ const Medications: React.FC = () => {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
+          onClick={() => setShowAddModal(true)}
           className="btn-primary mt-4 sm:mt-0 inline-flex items-center"
         >
           <PlusIcon className="h-5 w-5 mr-2" />
@@ -281,6 +301,15 @@ const Medications: React.FC = () => {
                   <button className="p-2 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors">
                     <PencilIcon className="h-4 w-4" />
                   </button>
+                  {medication.refillReminder?.enabled && (
+                    <button
+                      onClick={() => handleOpenRefill(medication)}
+                      className="p-2 text-gray-400 hover:text-medical-600 dark:hover:text-medical-400 hover:bg-medical-50 dark:hover:bg-medical-900/20 rounded-lg transition-colors"
+                      title="Order Refill"
+                    >
+                      <ArrowPathIcon className="h-4 w-4" />
+                    </button>
+                  )}
                   <button
                     onClick={() => handleDelete(medication._id)}
                     className={`p-2 rounded-lg transition-colors ${
@@ -350,6 +379,24 @@ const Medications: React.FC = () => {
           </p>
         </div>
       )}
+
+      {/* Add Medication Modal */}
+      <AddMedicationModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSubmit={createMedication}
+      />
+
+      {/* Refill Medication Modal */}
+      <RefillMedicationModal
+        isOpen={showRefillModal}
+        onClose={() => {
+          setShowRefillModal(false);
+          setSelectedMedication(null);
+        }}
+        medication={selectedMedication}
+        onSubmit={handleRefillSubmit}
+      />
     </div>
   );
 };

@@ -13,20 +13,27 @@ import { TrophyIcon, FireIcon } from '@heroicons/react/24/solid';
 import GamificationSection from '../../components/Gamification/GamificationSection';
 import { useAuth } from '../../contexts/AuthContext';
 import { useHealthMetrics } from '../../contexts/HealthMetricsContext';
+import { useMedications } from '../../contexts/MedicationsContext';
 import AddHealthMetricModal from '../../components/Modal/AddHealthMetricModal';
+import RefillMedicationModal from '../../components/Modal/RefillMedicationModal';
 import { useNavigate } from 'react-router-dom';
+import type { Medication } from '../../services/medications';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const { metrics, fetchMetrics, fetchJournalEntries } = useHealthMetrics();
+  const { medications, fetchMedications, recordRefill } = useMedications();
   const [isAddMetricModalOpen, setIsAddMetricModalOpen] = useState(false);
+  const [isRefillModalOpen, setIsRefillModalOpen] = useState(false);
+  const [selectedMedication, setSelectedMedication] = useState<Medication | null>(null);
   const navigate = useNavigate();
   
   useEffect(() => {
     // Fetch recent metrics and journal entries
     fetchMetrics({ limit: 10 });
     fetchJournalEntries({ limit: 5 });
-  }, [fetchMetrics, fetchJournalEntries]);
+    fetchMedications();
+  }, [fetchMetrics, fetchJournalEntries, fetchMedications]);
   
   // Get greeting based on time of day
   const getGreeting = () => {
@@ -78,10 +85,30 @@ const Dashboard: React.FC = () => {
     },
   ];
 
-  const upcomingRefills = [
-    { medication: 'Metformin', daysLeft: 3 },
-    { medication: 'Lisinopril', daysLeft: 7 },
-  ];
+  const upcomingRefills = medications
+    .filter(med => {
+      const supply = med.refillReminder?.currentSupply || 0;
+      const threshold = med.refillReminder?.daysBeforeEmpty || 7;
+      return med.isActive && supply <= threshold;
+    })
+    .map(med => ({
+      id: med._id,
+      medication: med.name,
+      daysLeft: med.refillReminder?.currentSupply || 0,
+      medicationData: med,
+    }))
+    .slice(0, 5); // Show top 5
+
+  const handleOpenRefill = (medication: Medication) => {
+    setSelectedMedication(medication);
+    setIsRefillModalOpen(true);
+  };
+
+  const handleRefillSubmit = async (refillData: any) => {
+    if (selectedMedication) {
+      await recordRefill(selectedMedication._id, refillData);
+    }
+  };
 
   // Get latest health metrics for display
   const latestMetrics = metrics.slice(0, 3).map(metric => {
@@ -228,27 +255,41 @@ const Dashboard: React.FC = () => {
           className="card"
         >
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Refill Alerts</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Refill Alerts
+            </h3>
             <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />
           </div>
-          <div className="space-y-3">
-            {upcomingRefills.map((refill, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-3 rounded-lg bg-yellow-50 border border-yellow-200"
-              >
-                <div>
-                  <p className="font-medium text-gray-900">{refill.medication}</p>
-                  <p className="text-sm text-gray-600">
-                    {refill.daysLeft} days remaining
-                  </p>
+          {upcomingRefills.length > 0 ? (
+            <div className="space-y-3">
+              {upcomingRefills.map((refill) => (
+                <div
+                  key={refill.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800"
+                >
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {refill.medication}
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {refill.daysLeft} days remaining
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleOpenRefill(refill.medicationData)}
+                    className="text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-500 dark:hover:text-primary-300 transition-colors"
+                  >
+                    Order Refill
+                  </button>
                 </div>
-                <button className="text-sm font-medium text-primary-600 hover:text-primary-500">
-                  Order Refill
-                </button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+              <p>No refills needed at this time</p>
+              <p className="text-sm mt-1">All medications are well stocked</p>
+            </div>
+          )}
         </motion.div>
       </div>
 
@@ -309,6 +350,17 @@ const Dashboard: React.FC = () => {
       <AddHealthMetricModal 
         isOpen={isAddMetricModalOpen}
         onClose={() => setIsAddMetricModalOpen(false)}
+      />
+
+      {/* Refill Medication Modal */}
+      <RefillMedicationModal
+        isOpen={isRefillModalOpen}
+        onClose={() => {
+          setIsRefillModalOpen(false);
+          setSelectedMedication(null);
+        }}
+        medication={selectedMedication}
+        onSubmit={handleRefillSubmit}
       />
     </div>
   );

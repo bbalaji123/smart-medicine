@@ -5,6 +5,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { HealthMetricsProvider } from './contexts/HealthMetricsContext';
 import { EmergencyContactsProvider } from './contexts/EmergencyContactsContext';
 import { MedicationsProvider } from './contexts/MedicationsContext';
+import { CareRecipientsProvider } from './contexts/CareRecipientsContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout/Layout';
@@ -121,22 +122,24 @@ function App() {
         <HealthMetricsProvider>
           <EmergencyContactsProvider>
             <MedicationsProvider>
-              <>
-                {/* cast again to avoid type errors in RouterProvider */}
-                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                <RouterProvider router={router} future={({ v7_startTransition: true } as any)} />
+              <CareRecipientsProvider>
+                <>
+                  {/* cast again to avoid type errors in RouterProvider */}
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                  <RouterProvider router={router} future={({ v7_startTransition: true } as any)} />
 
-                <Toaster
-                  position="top-right"
-                  toastOptions={{
-                    duration: 4000,
-                    style: {
-                      background: '#363636',
-                      color: '#fff',
-                    },
-                  }}
-                />
-              </>
+                  <Toaster
+                    position="top-right"
+                    toastOptions={{
+                      duration: 4000,
+                      style: {
+                        background: '#363636',
+                        color: '#fff',
+                      },
+                    }}
+                  />
+                </>
+              </CareRecipientsProvider>
             </MedicationsProvider>
           </EmergencyContactsProvider>
         </HealthMetricsProvider>

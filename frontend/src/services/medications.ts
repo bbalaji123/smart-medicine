@@ -174,8 +174,7 @@ export const medicationsAPI = {
   // Mark dose as taken
   markDoseTaken: async (medicationId: string, scheduleIndex: number, takenAt?: Date): Promise<Medication> => {
     try {
-      const response = await apiClient.post(`/medications/${medicationId}/dose`, {
-        scheduleIndex,
+      const response = await apiClient.put(`/medications/${medicationId}/schedule/${scheduleIndex}/taken`, {
         takenAt: takenAt || new Date()
       });
       return response.data.medication || response.data;
@@ -187,13 +186,30 @@ export const medicationsAPI = {
   // Mark dose as skipped
   markDoseSkipped: async (medicationId: string, scheduleIndex: number, reason?: string): Promise<Medication> => {
     try {
-      const response = await apiClient.post(`/medications/${medicationId}/skip`, {
-        scheduleIndex,
-        reason
+      const response = await apiClient.put(`/medications/${medicationId}/schedule/${scheduleIndex}/skipped`, {
+        reason: reason || 'No reason provided'
       });
       return response.data.medication || response.data;
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to mark dose as skipped');
+    }
+  },
+
+  // Record medication refill
+  recordRefill: async (medicationId: string, refillData: {
+    refillQuantity: number;
+    refillDate: string;
+    pharmacyName?: string;
+    pharmacyPhone?: string;
+    prescriptionNumber?: string;
+    cost?: number;
+    notes?: string;
+  }): Promise<Medication> => {
+    try {
+      const response = await apiClient.post(`/medications/${medicationId}/refill`, refillData);
+      return response.data.medication || response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to record refill');
     }
   },
 };

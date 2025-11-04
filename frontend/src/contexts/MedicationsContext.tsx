@@ -12,6 +12,7 @@ interface MedicationsContextType {
   deleteMedication: (id: string) => Promise<void>;
   markDoseTaken: (medicationId: string, scheduleIndex: number) => Promise<void>;
   markDoseSkipped: (medicationId: string, scheduleIndex: number, reason?: string) => Promise<void>;
+  recordRefill: (medicationId: string, refillData: any) => Promise<void>;
   refreshMedications: () => Promise<void>;
 }
 
@@ -122,6 +123,22 @@ export const MedicationsProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   }, []);
 
+  const recordRefill = useCallback(async (medicationId: string, refillData: any) => {
+    setError(null);
+    try {
+      const updatedMedication = await medicationsAPI.recordRefill(medicationId, refillData);
+      setMedications(prev =>
+        prev.map(med => (med._id === medicationId ? updatedMedication : med))
+      );
+      toast.success('Refill recorded successfully!');
+    } catch (err: any) {
+      const errorMessage = err.message || 'Failed to record refill';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      throw err;
+    }
+  }, []);
+
   const refreshMedications = useCallback(async () => {
     await fetchMedications();
   }, [fetchMedications]);
@@ -140,6 +157,7 @@ export const MedicationsProvider: React.FC<{ children: React.ReactNode }> = ({ c
     deleteMedication,
     markDoseTaken,
     markDoseSkipped,
+    recordRefill,
     refreshMedications,
   };
 

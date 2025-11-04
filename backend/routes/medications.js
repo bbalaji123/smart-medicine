@@ -66,24 +66,26 @@ router.post('/', [
   auth,
   body('name')
     .trim()
-    .isLength({ min: 1, max: 100 })
-    .withMessage('Medication name must be between 1 and 100 characters'),
-  body('dosage')
+    .isLength({ min: 1, max: 200 })
+    .withMessage('Medication name must be between 1 and 200 characters'),
+  body('dosage.amount')
+    .isFloat({ min: 0 })
+    .withMessage('Dosage amount must be a positive number'),
+  body('dosage.unit')
     .trim()
     .isLength({ min: 1, max: 50 })
-    .withMessage('Dosage is required and must be less than 50 characters'),
+    .withMessage('Dosage unit is required'),
   body('frequency')
-    .isInt({ min: 1, max: 24 })
-    .withMessage('Frequency must be between 1 and 24 times per day'),
+    .trim()
+    .isLength({ min: 1 })
+    .withMessage('Frequency is required'),
   body('startDate')
     .isISO8601()
     .withMessage('Please provide a valid start date'),
-  body('times')
-    .isArray({ min: 1 })
-    .withMessage('At least one time must be specified'),
-  body('times.*')
-    .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
-    .withMessage('Times must be in HH:MM format')
+  body('schedule')
+    .optional()
+    .isArray()
+    .withMessage('Schedule must be an array')
 ], async (req, res) => {
   try {
     // Check for validation errors
@@ -300,6 +302,211 @@ router.post('/:id/dose', [
     res.status(500).json({
       success: false,
       message: 'Server error while recording dose'
+    });
+  }
+});
+
+// @route   PUT /api/medications/:id/schedule/:scheduleIndex/taken
+// @desc    Mark a scheduled dose as taken
+// @access  Private
+router.put('/:id/schedule/:scheduleIndex/taken', auth, async (req, res) => {
+  try {
+    const { id, scheduleIndex } = req.params;
+    const medication = await Medication.findOne({
+      _id: id,
+      user: req.user.id
+    });
+
+    if (!medication) {
+      return res.status(404).json({
+        success: false,
+        message: 'Medication not found'
+      });
+    }
+
+    const index = parseInt(scheduleIndex);
+    if (!medication.schedule || index < 0 || index >= medication.schedule.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid schedule index'
+      });
+    }
+
+    medication.schedule[index].taken = true;
+    medication.schedule[index].takenAt = new Date();
+    medication.schedule[index].skipped = false;
+
+    await medication.save();
+
+    res.json({
+      success: true,
+      message: 'Dose marked as taken',
+      medication
+    });
+
+  } catch (error) {
+    console.error('Mark dose taken error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while marking dose as taken'
+    });
+  }
+});
+
+// @route   PUT /api/medications/:id/schedule/:scheduleIndex/skipped
+// @desc    Mark a scheduled dose as skipped
+// @access  Private
+router.put('/:id/schedule/:scheduleIndex/skipped', auth, async (req, res) => {
+  try {
+    const { id, scheduleIndex } = req.params;
+    const { reason } = req.body;
+
+    const medication = await Medication.findOne({
+      _id: id,
+      user: req.user.id
+    });
+
+    if (!medication) {
+      return res.status(404).json({
+        success: false,
+        message: 'Medication not found'
+      });
+    }
+
+    const index = parseInt(scheduleIndex);
+    if (!medication.schedule || index < 0 || index >= medication.schedule.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid schedule index'
+      });
+    }
+
+    medication.schedule[index].skipped = true;
+    medication.schedule[index].skippedReason = reason || 'No reason provided';
+    medication.schedule[index].taken = false;
+
+    await medication.save();
+
+    res.json({
+      success: true,
+      message: 'Dose marked as skipped',
+      medication
+    });
+
+  } catch (error) {
+    console.error('Mark dose skipped error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while marking dose as skipped'
+    });
+  }
+});
+
+// @route   POST /api/medications/:id/refill
+// @desc    Record a medication refill
+// @access  Private
+router.post('/:id/refill', [
+  auth,
+  body('refillQuantity')
+    .isInt({ min: 1 })
+    .withMessage('Refill quantity must be a positive integer'),
+  body('refillDate')
+    .isISO8601()
+    .withMessage('Please provide a valid refill date'),
+  body('pharmacyName')
+    .optional()
+    .trim()
+    .isLength({ max: 200 })
+    .withMessage('Pharmacy name must be less than 200 characters'),
+  body('pharmacyPhone')
+    .optional()
+    .trim()
+    .isLength({ max: 50 })
+    .withMessage('Pharmacy phone must be less than 50 characters'),
+  body('prescriptionNumber')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Prescription number must be less than 100 characters'),
+  body('cost')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Cost must be a positive number'),
+  body('notes')
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('Notes must be less than 500 characters')
+], async (req, res) => {
+  try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { refillQuantity, refillDate, pharmacyName, pharmacyPhone, prescriptionNumber, cost, notes } = req.body;
+
+    const medication = await Medication.findOne({
+      _id: req.params.id,
+      user: req.user.id
+    });
+
+    if (!medication) {
+      return res.status(404).json({
+        success: false,
+        message: 'Medication not found'
+      });
+    }
+
+    // Update current supply
+    const currentSupply = medication.refillReminder?.currentSupply || 0;
+    const newSupply = currentSupply + refillQuantity;
+
+    medication.refillReminder = {
+      ...medication.refillReminder,
+      currentSupply: newSupply,
+      lastRefillDate: new Date(refillDate)
+    };
+
+    // Add to refill history if it exists in the model
+    if (!medication.refillHistory) {
+      medication.refillHistory = [];
+    }
+
+    medication.refillHistory.push({
+      refillDate: new Date(refillDate),
+      quantity: refillQuantity,
+      pharmacyName: pharmacyName || '',
+      pharmacyPhone: pharmacyPhone || '',
+      prescriptionNumber: prescriptionNumber || '',
+      cost: cost || 0,
+      notes: notes || '',
+      createdAt: new Date()
+    });
+
+    await medication.save();
+
+    res.json({
+      success: true,
+      message: 'Refill recorded successfully',
+      medication,
+      refillInfo: {
+        previousSupply: currentSupply,
+        refillAmount: refillQuantity,
+        newSupply: newSupply
+      }
+    });
+
+  } catch (error) {
+    console.error('Record refill error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while recording refill'
     });
   }
 });

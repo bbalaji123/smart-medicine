@@ -13,8 +13,10 @@ import {
   HeartIcon,
   ChartBarIcon,
 } from '@heroicons/react/24/outline';
+import { useCareRecipients } from '../../contexts/CareRecipientsContext';
+import AddCareRecipientModal from '../../components/Modal/AddCareRecipientModal';
 
-interface CareRecipient {
+interface CareRecipientDisplay {
   id: string;
   name: string;
   relationship: string;
@@ -27,68 +29,60 @@ interface CareRecipient {
 }
 
 const CaregiverDashboard: React.FC = () => {
+  const { careRecipients, loading, addCareRecipient } = useCareRecipients();
   const [selectedRecipient, setSelectedRecipient] = useState<string | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  // Mock data
-  const careRecipients: CareRecipient[] = [
-    {
-      id: '1',
-      name: 'Mom (Mary Johnson)',
-      relationship: 'Mother',
-      adherenceRate: 94,
-      lastActivity: new Date('2024-01-15T10:30:00'),
-      medicationCount: 4,
-      recentAlerts: 1,
-      status: 'good',
-    },
-    {
-      id: '2',
-      name: 'Dad (Robert Johnson)',
-      relationship: 'Father',
-      adherenceRate: 78,
-      lastActivity: new Date('2024-01-14T20:15:00'),
-      medicationCount: 6,
-      recentAlerts: 3,
-      status: 'warning',
-    },
-    {
-      id: '3',
-      name: 'Grandma (Helen Smith)',
-      relationship: 'Grandmother',
-      adherenceRate: 45,
-      lastActivity: new Date('2024-01-13T08:00:00'),
-      medicationCount: 8,
-      recentAlerts: 5,
-      status: 'critical',
-    },
-  ];
+  // Transform API data to display format with mock stats (in production, these would come from backend)
+  const displayRecipients: CareRecipientDisplay[] = careRecipients.map(recipient => {
+    // Calculate age if dateOfBirth is available
+    const age = recipient.age || (recipient.dateOfBirth 
+      ? new Date().getFullYear() - new Date(recipient.dateOfBirth).getFullYear()
+      : null);
+    
+    // Mock data for adherence, last activity, and alerts (replace with real data from backend)
+    const adherenceRate = Math.floor(Math.random() * 40) + 60; // Random 60-100%
+    const daysAgo = Math.floor(Math.random() * 5); // Random 0-5 days
+    const lastActivity = new Date();
+    lastActivity.setDate(lastActivity.getDate() - daysAgo);
+    
+    const medicationCount = recipient.currentMedications?.length || 0;
+    const recentAlerts = adherenceRate < 70 ? Math.floor(Math.random() * 5) + 1 : Math.floor(Math.random() * 2);
+    
+    let status: 'good' | 'warning' | 'critical';
+    if (adherenceRate >= 85) status = 'good';
+    else if (adherenceRate >= 70) status = 'warning';
+    else status = 'critical';
 
-  const recentAlerts = [
-    {
-      id: '1',
-      recipientName: 'Dad (Robert Johnson)',
-      type: 'missed_dose',
-      medication: 'Metformin',
-      time: '2 hours ago',
-      severity: 'medium',
-    },
-    {
-      id: '2',
-      recipientName: 'Grandma (Helen Smith)',
-      type: 'no_activity',
-      medication: 'Multiple medications',
-      time: '1 day ago',
-      severity: 'high',
-    },
-    {
-      id: '3',
-      recipientName: 'Mom (Mary Johnson)',
-      type: 'refill_needed',
-      medication: 'Lisinopril',
-      time: '3 hours ago',
-      severity: 'low',
-    },
-  ];
+    return {
+      id: recipient._id,
+      name: `${recipient.name}${age ? ` (${age})` : ''}`,
+      relationship: recipient.relationship,
+      adherenceRate,
+      lastActivity,
+      medicationCount,
+      recentAlerts,
+      status,
+    };
+  });
+
+  // Mock recent alerts (in production, these would come from backend)
+  const recentAlerts = displayRecipients
+    .filter(r => r.recentAlerts > 0)
+    .slice(0, 3)
+    .map((recipient, index) => ({
+      id: `${recipient.id}-${index}`,
+      recipientName: recipient.name,
+      type: index === 0 ? 'missed_dose' : index === 1 ? 'no_activity' : 'refill_needed',
+      medication: recipient.medicationCount > 0 ? 'Medication' : 'Multiple medications',
+      time: `${Math.floor(Math.random() * 24)} hours ago`,
+      severity: recipient.status === 'critical' ? 'high' : recipient.status === 'warning' ? 'medium' : 'low',
+    }));
+
+  const handleAddCareRecipient = async (data: any) => {
+    await addCareRecipient(data);
+    setIsAddModalOpen(false);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -150,6 +144,7 @@ const CaregiverDashboard: React.FC = () => {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
+          onClick={() => setIsAddModalOpen(true)}
           className="btn-primary mt-4 sm:mt-0 inline-flex items-center"
         >
           <PlusIcon className="h-5 w-5 mr-2" />
@@ -170,7 +165,7 @@ const CaregiverDashboard: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">Care Recipients</p>
-              <p className="text-2xl font-bold text-gray-900">{careRecipients.length}</p>
+              <p className="text-2xl font-bold text-gray-900">{displayRecipients.length}</p>
             </div>
           </div>
         </motion.div>
@@ -188,7 +183,9 @@ const CaregiverDashboard: React.FC = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">Avg. Adherence</p>
               <p className="text-2xl font-bold text-gray-900">
-                {Math.round(careRecipients.reduce((acc, r) => acc + r.adherenceRate, 0) / careRecipients.length)}%
+                {displayRecipients.length > 0
+                  ? Math.round(displayRecipients.reduce((acc, r) => acc + r.adherenceRate, 0) / displayRecipients.length)
+                  : 0}%
               </p>
             </div>
           </div>
@@ -224,7 +221,7 @@ const CaregiverDashboard: React.FC = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">Total Medications</p>
               <p className="text-2xl font-bold text-gray-900">
-                {careRecipients.reduce((acc, r) => acc + r.medicationCount, 0)}
+                {displayRecipients.reduce((acc, r) => acc + r.medicationCount, 0)}
               </p>
             </div>
           </div>
@@ -240,8 +237,25 @@ const CaregiverDashboard: React.FC = () => {
           className="card"
         >
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Care Recipients</h3>
-          <div className="space-y-4">
-            {careRecipients.map((recipient) => (
+          {loading ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">Loading...</p>
+            </div>
+          ) : displayRecipients.length === 0 ? (
+            <div className="text-center py-8">
+              <UsersIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-500">No care recipients yet</p>
+              <button
+                onClick={() => setIsAddModalOpen(true)}
+                className="btn-primary mt-4 inline-flex items-center"
+              >
+                <PlusIcon className="h-5 w-5 mr-2" />
+                Add Your First Care Recipient
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {displayRecipients.map((recipient) => (
               <div
                 key={recipient.id}
                 className={`p-4 rounded-lg border-2 transition-all cursor-pointer ${
@@ -300,6 +314,7 @@ const CaregiverDashboard: React.FC = () => {
               </div>
             ))}
           </div>
+          )}
         </motion.div>
 
         {/* Recent Alerts */}
@@ -353,7 +368,7 @@ const CaregiverDashboard: React.FC = () => {
         >
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">
-              {careRecipients.find(r => r.id === selectedRecipient)?.name} - Detailed View
+              {displayRecipients.find(r => r.id === selectedRecipient)?.name} - Detailed View
             </h3>
             <div className="flex space-x-2">
               <button className="btn-secondary text-sm inline-flex items-center">
@@ -376,7 +391,7 @@ const CaregiverDashboard: React.FC = () => {
             <div className="bg-gray-50 rounded-lg p-4">
               <h4 className="font-medium text-gray-900 mb-2">This Week</h4>
               <p className="text-sm text-gray-600">
-                {careRecipients.find(r => r.id === selectedRecipient)?.adherenceRate}% adherence
+                {displayRecipients.find(r => r.id === selectedRecipient)?.adherenceRate}% adherence
               </p>
               <p className="text-xs text-gray-500">Above average</p>
             </div>
@@ -384,13 +399,20 @@ const CaregiverDashboard: React.FC = () => {
             <div className="bg-gray-50 rounded-lg p-4">
               <h4 className="font-medium text-gray-900 mb-2">Last Contact</h4>
               <p className="text-sm text-gray-600">
-                {formatLastActivity(careRecipients.find(r => r.id === selectedRecipient)?.lastActivity || new Date())}
+                {formatLastActivity(displayRecipients.find(r => r.id === selectedRecipient)?.lastActivity || new Date())}
               </p>
               <p className="text-xs text-gray-500">App activity</p>
             </div>
           </div>
         </motion.div>
       )}
+
+      {/* Add Care Recipient Modal */}
+      <AddCareRecipientModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onAdd={handleAddCareRecipient}
+      />
     </div>
   );
 };

@@ -5,9 +5,10 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title: string;
+  title?: string;
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  maxWidth?: string;
 }
 
 const Modal: React.FC<ModalProps> = ({
@@ -16,6 +17,7 @@ const Modal: React.FC<ModalProps> = ({
   title,
   children,
   size = 'md',
+  maxWidth,
 }) => {
   const sizeClasses = {
     sm: 'max-w-md',
@@ -23,6 +25,8 @@ const Modal: React.FC<ModalProps> = ({
     lg: 'max-w-2xl',
     xl: 'max-w-4xl',
   };
+
+  const widthClass = maxWidth || sizeClasses[size];
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -51,22 +55,24 @@ const Modal: React.FC<ModalProps> = ({
               leaveTo="opacity-0 scale-95"
             >
               <Dialog.Panel
-                className={`w-full ${sizeClasses[size]} transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all`}
+                className={`w-full ${widthClass} transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all`}
               >
-                <div className="flex items-center justify-between mb-4">
-                  <Dialog.Title
-                    as="h3"
-                    className="text-lg font-semibold text-gray-900"
-                  >
-                    {title}
-                  </Dialog.Title>
-                  <button
-                    onClick={onClose}
-                    className="rounded-lg p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-                  >
-                    <XMarkIcon className="h-5 w-5" />
-                  </button>
-                </div>
+                {title && (
+                  <div className="flex items-center justify-between mb-4">
+                    <Dialog.Title
+                      as="h3"
+                      className="text-lg font-semibold text-gray-900"
+                    >
+                      {title}
+                    </Dialog.Title>
+                    <button
+                      onClick={onClose}
+                      className="rounded-lg p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                    >
+                      <XMarkIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                )}
                 {children}
               </Dialog.Panel>
             </Transition.Child>
