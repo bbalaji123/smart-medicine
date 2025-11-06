@@ -1,8 +1,36 @@
 # Smart Medicine - Render Deployment Guide
 
-## 🚀 Quick Deployment Steps
+## 🚀 Quick Deployment Methods
 
-### Backend Deployment (Web Service)
+### Method 1: One-Click Deployment with Blueprint (Recommended)
+
+1. **Push your code to GitHub** (if not already done)
+   ```bash
+   git add .
+   git commit -m "Prepare for Render deployment"
+   git push origin main
+   ```
+
+2. **Deploy using Render Blueprint**
+   - Go to [Render Dashboard](https://dashboard.render.com/)
+   - Click **"New"** → **"Blueprint"**
+   - Connect your GitHub repository
+   - Render will detect `render.yaml` and set up both services automatically
+   - You'll only need to manually add your **MongoDB URI** in the backend environment variables
+
+3. **Add MongoDB URI**
+   - After blueprint deployment, go to your backend service
+   - Navigate to **Environment** tab
+   - Add/Update: `MONGODB_URI` with your MongoDB Atlas connection string
+   - Save (this will trigger a redeploy)
+
+4. **Done!** Both services are now deployed and connected
+
+---
+
+### Method 2: Manual Deployment
+
+#### Backend Deployment (Web Service)
 
 1. **Create Web Service on Render**
    - Connect your GitHub repository
