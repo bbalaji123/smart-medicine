@@ -11,6 +11,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout/Layout';
 import Login from './pages/Auth/Login';
 import Signup from './pages/Auth/Signup';
+import ForgotPassword from './pages/Auth/ForgotPassword';
 import Dashboard from './pages/Dashboard/Dashboard';
 import Medications from './pages/Medications/Medications';
 import Reminders from './pages/Reminders/Reminders';
@@ -24,6 +25,7 @@ function App() {
   const routes = [
     { path: '/login', element: <Login /> },
     { path: '/signup', element: <Signup /> },
+    { path: '/forgot-password', element: <ForgotPassword /> },
 
     // Root redirect to dashboard inside protected layout
     {

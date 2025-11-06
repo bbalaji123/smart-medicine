@@ -22,21 +22,43 @@ export const MedicationsProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [medications, setMedications] = useState<Medication[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
 
   const fetchMedications = useCallback(async () => {
+    // Check if user is authenticated
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.log('Skipping medications fetch - user not authenticated');
+      return;
+    }
+    
+    // Debounce: Prevent fetching more than once per 2 seconds
+    const now = Date.now();
+    if (now - lastFetchTime < 2000) {
+      console.log('Skipping medications fetch - too soon since last fetch');
+      return;
+    }
+    
     setLoading(true);
     setError(null);
+    setLastFetchTime(now);
+    
     try {
       const data = await medicationsAPI.getMedications();
       setMedications(data);
     } catch (err: any) {
-      const errorMessage = err.message || 'Failed to fetch medications';
-      setError(errorMessage);
-      toast.error(errorMessage);
+      // Only log error, don't show to user if it's authentication related
+      if (err.response?.status === 401) {
+        console.log('Authentication required - redirecting to login');
+      } else {
+        const errorMessage = err.message || 'Failed to fetch medications';
+        setError(errorMessage);
+        toast.error(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [lastFetchTime]);
 
   const createMedication = useCallback(async (data: MedicationInput) => {
     setLoading(true);
@@ -144,7 +166,11 @@ export const MedicationsProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [fetchMedications]);
 
   useEffect(() => {
-    fetchMedications();
+    // Only fetch if user is authenticated (token exists)
+    const token = localStorage.getItem('token');
+    if (token) {
+      fetchMedications();
+    }
   }, [fetchMedications]);
 
   const value: MedicationsContextType = {

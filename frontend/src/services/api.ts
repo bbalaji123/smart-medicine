@@ -28,13 +28,35 @@ apiClient.interceptors.request.use(
 // Response interceptor to handle errors
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Handle 429 Too Many Requests with retry logic
+    if (error.response?.status === 429 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      // Get retry-after from response header or default to 2 seconds
+      const retryAfter = error.response.headers['retry-after'] 
+        ? parseInt(error.response.headers['retry-after']) * 1000 
+        : 2000;
+      
+      console.warn(`Rate limited. Retrying after ${retryAfter}ms...`);
+      
+      // Wait for the specified time
+      await new Promise(resolve => setTimeout(resolve, retryAfter));
+      
+      // Retry the request
+      return apiClient(originalRequest);
+    }
+
+    // Handle 401 Unauthorized
     if (error.response?.status === 401) {
       // Token expired or invalid
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
+    
     return Promise.reject(error);
   }
 );

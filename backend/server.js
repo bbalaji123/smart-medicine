@@ -16,25 +16,53 @@ const careRecipientsRoutes = require('./routes/careRecipients');
 // Initialize express app
 const app = express();
 
-// Security middleware
-app.use(helmet());
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
-});
-app.use(limiter);
-
-// CORS configuration
+// CORS configuration - MUST come first before other middleware
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
-  credentials: true
+  origin: ['http://localhost:3000', 'http://localhost:3001'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Length', 'X-Request-Id'],
+  maxAge: 600, // Cache preflight requests for 10 minutes
 }));
 
-// Body parsing middleware
+// Handle preflight requests
+app.options('*', cors());
+
+// Body parsing middleware - before other middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Security middleware
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+// Rate limiting - skip for OPTIONS (preflight) requests
+// Very lenient for development - adjust in production
+const limiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute window
+  max: 1000, // 1000 requests per minute (very high for development)
+  skip: (req) => {
+    // Skip rate limiting for:
+    // 1. OPTIONS (CORS preflight) requests
+    // 2. Development environment
+    return req.method === 'OPTIONS' || process.env.NODE_ENV === 'development';
+  },
+  standardHeaders: true, // Return rate limit info in RateLimit-* headers
+  legacyHeaders: false, // Disable X-RateLimit-* headers
+  message: 'Too many requests from this IP, please try again later.',
+  handler: (req, res) => {
+    res.status(429).json({
+      success: false,
+      message: 'Too many requests, please try again later.',
+      retryAfter: Math.ceil(req.rateLimit.resetTime / 1000),
+    });
+  },
+});
+
+// Apply to all /api routes (but will be skipped in development)
+app.use('/api', limiter);
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/smart-medicine', {
@@ -45,8 +73,9 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/smart-med
   console.log('✅ Connected to MongoDB');
 })
 .catch((error) => {
-  console.error('❌ MongoDB connection error:', error);
-  process.exit(1);
+  console.error('❌ MongoDB connection error:', error.message);
+  console.log('⚠️  Continuing without MongoDB - some features may not work');
+  // Don't exit the process, continue without MongoDB for now
 });
 
 // Routes

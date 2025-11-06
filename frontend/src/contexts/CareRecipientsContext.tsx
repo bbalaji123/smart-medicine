@@ -31,17 +31,39 @@ export const CareRecipientsProvider: React.FC<CareRecipientsProviderProps> = ({ 
   const [careRecipients, setCareRecipients] = useState<CareRecipient[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
 
   const fetchCareRecipients = async () => {
+    // Check if user is authenticated
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.log('Skipping fetch - user not authenticated');
+      return;
+    }
+    
+    // Debounce: Prevent fetching more than once per 2 seconds
+    const now = Date.now();
+    if (now - lastFetchTime < 2000) {
+      console.log('Skipping fetch - too soon since last fetch');
+      return;
+    }
+    
     setLoading(true);
     setError(null);
+    setLastFetchTime(now);
+    
     try {
       const data = await careRecipientsService.getCareRecipients();
       setCareRecipients(data);
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Failed to fetch care recipients';
-      setError(errorMessage);
-      console.error('Error fetching care recipients:', err);
+      // Only log error, don't show to user if it's authentication related
+      if (err.response?.status === 401) {
+        console.log('Authentication required - redirecting to login');
+      } else {
+        const errorMessage = err.response?.data?.message || 'Failed to fetch care recipients';
+        setError(errorMessage);
+        console.error('Error fetching care recipients:', err);
+      }
     } finally {
       setLoading(false);
     }
@@ -107,7 +129,12 @@ export const CareRecipientsProvider: React.FC<CareRecipientsProviderProps> = ({ 
   };
 
   useEffect(() => {
-    fetchCareRecipients();
+    // Only fetch if user is authenticated (token exists)
+    const token = localStorage.getItem('token');
+    if (token) {
+      fetchCareRecipients();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const value = {
